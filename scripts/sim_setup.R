@@ -337,6 +337,8 @@ saveRDS(ph1_phenotrip_bigspatial2, file = "data/ph1_phenotrip_bigspatial2.rds")
 ############
 # 2 Phases #
 ############
+#prep
+phen_gen <- readRDS("data/phen_gen.rds")
 
 #ph1
 
