@@ -339,7 +339,7 @@ saveRDS(ph1_phenotrip_bigspatial2, file = "data/ph1_phenotrip_bigspatial2.rds")
 ###########
 
 #prep
-
+phen_gen <- readRDS("data/phen_gen.rds")
 ph1.des <- des.prep00(960, 30, 50, rep(c(2, 1), c(540, 420)), phen_gen$id,
                       ribs = 30, cibs = 25, tgrp = rep(c(2, 1), c(540, 420)))
 
