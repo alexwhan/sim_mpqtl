@@ -334,14 +334,14 @@ saveRDS(ph1_phenotrip_bigspatial2, file = "data/ph1_phenotrip_bigspatial2.rds")
 
 
 
-###########
-# Phase 2 #
-###########
+############
+# 2 Phases #
+############
 
-#prep
+#ph1
 
-ph1.des <- des.prep00(960, 30, 50, rep(c(2, 1), c(540, 420)), phen_gen$id,
-                      ribs = 30, cibs = 25, tgrp = rep(c(2, 1), c(540, 420)))
+p2ph1.des <- des.prep00(750, 10, 10, rep(c(2, 1), c(250, 500)), sample(phen_gen$id, 750),
+                      ribs = c(5), cibs = c(10), tgrp = rep(c(2, 1), c(250, 500)))
 
 ph2.desprep <- des.prep00(1499, 17, 100, rep(c(2, 1), c(201, 1298)),
                           tnam = as.character(1:1499),# phen_gen$id,
