@@ -340,16 +340,153 @@ saveRDS(ph1_phenotrip_bigspatial2, file = "data/ph1_phenotrip_bigspatial2.rds")
 #prep
 phen_gen <- readRDS("data/phen_gen.rds")
 
-#ph1
+#ph1 750 trts
+# 20 x 50 des
 
-p2ph1.des <- des.prep00(750, 10, 10, rep(c(2, 1), c(250, 500)), sample(phen_gen$id, 750),
-                      ribs = c(5), cibs = c(10), tgrp = rep(c(2, 1), c(250, 500)))
+p2p1_row_effects <- data_frame(
+  row = 1:20,
+  p1_row_effect = seq(from = -0.5, to = 0.5, length = 20)
+)
+p2p1_range_effects <- data_frame(
+  range = 1:50,
+  p1_range_effects = seq(from = -0.75, to = 0.75, length = 50)
+)
 
-ph2.desprep <- des.prep00(1499, 17, 100, rep(c(2, 1), c(201, 1298)),
-                          tnam = as.character(1:1499),# phen_gen$id,
-                          ribs = c(17), cibs = c(50), 
-                          tgrp = rep(c(2, 1), c(201, 1298)))
+p2ph1.des <- des.prep00(750, 20, 50, rep(c(2, 1), c(250, 500)), sample(phen_gen$id, 750),
+                      ribs = c(20), cibs = c(25), tgrp = rep(c(2, 1), c(250, 500)))
+saveRDS(p2ph1.des, "data/p2ph1.des")
+p2ph1_out <- run(p2ph1.des)
+saveRDS(p2ph1_out, "data/p2ph1_out")
 
-ph2_outprep <- run(ph2.desprep)
+phph1_df <- p2ph1_out$dlist %>% 
+  tbl_df() %>% 
+  rename(row = ROW,
+         range = RANGE) %>% 
+  mutate(id = as.numeric(ID)) %>% 
+  mutate(block = ceiling(range / 25)) %>% 
+  left_join(p2p1_row_effects) %>% 
+  left_join(p2p1_range_effects) %>% 
+  group_by(id) %>% 
+  mutate(p1rep = n()) %>% 
+  ungroup() %>% 
+  mutate(p1_plotid = 1:nrow(.)) %>% 
+  mutate()
 
+#Phase2
 
+#ph2 10 x 120 des
+
+p2p2_row_effects <- data_frame(
+  p2_row = 1:10,
+  p2_row_effect = rnorm(10, sd = 0.15) + rnorm(10, sd = 0.05)
+)
+p2p2_range_effects <- data_frame(
+  p2_range = 1:120,
+  p2_range_effects = seq(from = -0.4, to = 0.4, length = 120) + rnorm(120, sd = 0.075)
+)
+p1_doubles <- phph1_df$id[phph1_df$p1rep == 2] %>% unique
+p1_singles <- phph1_df$id[phph1_df$p1rep == 1]
+p2_doubles <- sample(p1_singles, 200)
+p2_singles <- p1_singles[!p1_singles %in% p2_doubles]
+
+p2ph2.des <- des.prep00(750, 10, 120, rep(c(2, 1), c(450, 300)),
+                        c(p1_doubles, p2_doubles, p2_singles), 
+                        ribs = c(10), cibs = 60, tgrp = rep(c(2, 1), c(450, 300)))
+saveRDS(p2ph2.des, "data/p2ph2.des")
+p2ph2_out <- run(p2ph2.des)
+saveRDS(p2ph2_out, "data/p2ph2_out")
+
+p2ph2_df <- p2ph2_out$dlist %>% 
+  tbl_df() %>% 
+  rename(p2_row = ROW,
+         p2_range = RANGE) %>% 
+  mutate(id = as.numeric(as.character(ID)),
+         p2_block = ceiling(p2_range / 60)) %>% 
+  left_join(p2p2_row_effects) %>% 
+  left_join(p2p2_range_effects) %>% 
+  mutate(p2_plotid = 1:nrow(.)) %>% 
+  group_by(ID) %>% 
+  mutate(p2rep = n())
+
+phph1_reps <- phph1_df %>%
+  rename(p1_block = block) %>% 
+  select(p1_row = row, p1_range = range, id, contains("p1"), ID) %>% 
+  filter(p1rep == 2)
+
+p2ph2_reps <- p2ph2_df %>% 
+  ungroup() %>% 
+  select(contains("p2"), id) %>% 
+  filter(id %in% phph1_reps$id)
+
+p1p2_joinreps <- phph1_reps %>% 
+  arrange(id) %>% 
+  bind_cols(p2ph2_reps %>% 
+              arrange(id) %>% 
+              select(-id))
+
+phph1_sing <-  phph1_df %>%
+  rename(p1_block = block) %>% 
+  select(p1_row = row, p1_range = range, id, contains("p1"), ID) %>% 
+  filter(p1rep == 1) %>% 
+  full_join(p2ph2_df %>% 
+              ungroup() %>% 
+              select(contains("p2"), id) %>% 
+              filter(!id %in% phph1_reps$id))
+
+p1p2_df <- p1p2_joinreps %>% 
+  arrange(id) %>% 
+  bind_rows(phph1_sing %>% 
+              arrange(id)) 
+
+#Phase 3
+#ph3 15 x 100 des
+
+p2p3_row_effects <- data_frame(
+  p3_row = 1:15,
+  p3_row_effect = rnorm(15, sd = 0.1)
+)
+p2p3_range_effects <- data_frame(
+  p3_range = 1:100,
+  p3_range_effects = seq(from = -0.3, to = 0.3, length = 100)
+)
+
+p2ph3.des <- DiGGer(750, 15, 100, 15, 50, TreatmentName = unique(p2ph2_df$id))
+
+p2ph3_df <- p2ph3.des$idsgn %>%
+  as.data.frame %>% 
+  tbl_df() %>% 
+  mutate(p3_row = 1:15) %>% 
+  gather(p3_range, id, -p3_row) %>% 
+  mutate(p3_range = as.numeric(sub("V", "", p3_range)),
+         id = factor(id),
+         p3_block = ceiling(p3_range / 50)) %>% 
+  left_join(p2p3_row_effects) %>% 
+  left_join(p2p3_range_effects) %>% 
+  rename(id_merge = id)
+
+p1p2_df <- p1p2_df %>% 
+  mutate(id_merge = as.factor(as.numeric(as.factor(id)))) 
+
+p1p2_dubs <- p1p2_df %>% 
+  filter(p2rep == 2) %>% 
+  arrange(id_merge) 
+
+p1p3_join1 <- p2ph3_df %>% 
+  filter(id_merge %in% p1p2_dubs$id_merge) %>% 
+  arrange(id_merge) %>% 
+  bind_cols(p1p2_dubs)
+
+p1p3_join2 <- p2ph3_df %>% 
+  filter(!id_merge %in% p1p2_dubs$id_merge) %>% 
+  left_join(p1p2_df)
+
+p1p3_df <- p1p3_join1 %>% 
+  bind_rows(p1p3_join2) %>% 
+  mutate(p3_spatial = p3_row_effect + p3_range_effects +
+           p2_row_effect + p2_range_effects +
+           p1_row_effect + p1_range_effects) %>% 
+  left_join(phen_gen %>% rename(ID = id)) %>% 
+  mutate(p3_pheno = p3_spatial + all_sum +
+           rnorm(1500, sd = 0.2))
+
+saveRDS(p1p3_df, "data/p1p3_df.rds")
